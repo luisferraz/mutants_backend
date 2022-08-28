@@ -1,15 +1,15 @@
 //importing modules
 const express = require("express");
 const userController = require("../controllers/user_controller");
-const { signup, login } = userController;
-const userAuth = require("../middlewares/user_auth");
+const { signUp, login } = userController;
+const { verifyNewUser } = require("../middlewares/user_auth");
 
 const router = express.Router();
 
-//signup endpoint
-//passing the middleware function to the signup
-router.post("/signup", userAuth.saveUser, signup);
-
+//Endpoint de cadastro de usuário
+//Executa a função verifyNewUser, que verifica se o usuário é novo mesmo
+//Que por sua vez executa a funçào signup
+router.post("/signup", verifyNewUser, signUp);
 //login route
 router.post("/login", login);
 

@@ -1,89 +1,69 @@
-//importing modules
 const bcrypt = require("bcrypt");
 const db = require("../models");
-const jwt = require("jsonwebtoken");
+const { jwtTokens } = require("../utils/jwt_helpers");
 
-// Assigning users to the variable User
+//Atribui o modelo users para a variável Users
 const User = db.users;
 
-//signing a user up
-//hashing users password before its saved to the database with bcrypt
-const signup = async (req, res) => {
+//Inclui um novo usuário
+const signUp = async (req, res) => {
   try {
+    //Pega email e senha do body da requisição
     const { email, password } = req.body;
-    const data = {
+
+    //Cria um objeto com o email e a senha criptografada
+    const dados = {
       email,
-      password: await bcrypt.hash(password, 10),
+      password: await bcrypt.hash(password.toString(), 10),
     };
-    //saving the user
-    const user = await User.create(data);
 
-    //if user details is captured
-    //generate token with the user's id and the secretKey in the env file
-    // set cookie with the token generated
+    //Cria o usuario no banco de dados com esses dados
+    const user = await User.create(dados);
+
+    //Se a criacao do usuario deu certo, retornamos 201 created
     if (user) {
-      let token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRES,
-      });
-
-      res.cookie("jwt", token, {
-        maxAge: process.env.JWT_EXPIRES,
-        httpOnly: true,
-      });
-      console.log("user", JSON.stringify(user, null, 2));
-      console.log(token);
-      //send users details
-      return res.status(201).send(user);
+      return res.status(201).json({ message: "Created" });
     } else {
-      return res.status(404).send("Details are not correct");
+      return res.status(404).json({ error: "Details are not correct" });
     }
   } catch (error) {
-    const errObj = {};
-    error.errors.map((er) => {
-      errObj[er.path] = er.message;
-    });
-    console.log(errObj);
-    return res.status(400).send(errObj);
+    console.log(error);
+    return res.status(500).json({ error: error.message });
   }
 };
 
-//login authentication
-
+// Login
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    //find a user by their email
+    //Busca o usuário no banco pelo email
     const user = await User.findOne({ email });
 
-    //if user email is found, compare password with bcrypt
-    if (user) {
-      const isSame = await bcrypt.compare(password, user.password);
-
-      //if password is the same
-      //generate token with the user's id and the secretKey in the env file
-
-      if (isSame) {
-        let token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
-          expiresIn: process.env.JWT_EXPIRES,
-        });
-
-        //if password matches with the one in the database
-        //go ahead and generate a cookie for the user
-        res.cookie("jwt", token, {
-          maxAge: process.env.JWT_EXPIRES,
-          httpOnly: true,
-        });
-        console.log("user", JSON.stringify(user, null, 2));
-        console.log(token);
-        //send user dataexi
-        return res.status(201).send(user);
-      } else {
-        return res.status(401).send("Authentication failed");
-      }
-    } else {
-      return res.status(401).send("Authentication failed");
+    //Se nao encontrado, retorna http 401 email nao encontrado
+    if (!user) {
+      res.status(401).json({ error: "Email nao encontrado" });
     }
+
+    //Se encontrado, verifica a senha com bcrypt.compare
+    const validPassword = await bcrypt.compare(password, user.password);
+
+    //Se a senha for invalida, retorna 401 senha incorreta
+    if (!validPassword) {
+      res.status(401).json({ error: "Senha incorreta" });
+    }
+
+    //Se a validação esta correta, retorna o JWT
+    let tokens = jwtTokens(user.id, user.email);
+
+    //Salva um cookie com o refresh_token
+    res.cookie("refresh_token", tokens.refreshToken, {
+      maxAge: process.env.JWT_EXPIRES,
+      httpOnly: true,
+    });
+
+    console.log(tokens);
+    res.status(200).json(tokens);
   } catch (error) {
     const errObj = {};
     error.errors.map((er) => {
@@ -95,6 +75,6 @@ const login = async (req, res) => {
 };
 
 module.exports = {
-  signup,
+  signUp,
   login,
 };

@@ -1,35 +1,39 @@
-//importing modules
 const express = require("express");
 const db = require("../models");
 
-//Assigning db.users to User variable
+//Atribui o modelo users a variavel Users
 const User = db.users;
 
-//Function to check if email already exist in the database
-//this is to avoid having two users with the same email
-const saveUser = async (req, res, next) => {
-  //search the database to see if user exist
-  try {
 
-    //checking if email already exist
-    const emailcheck = await User.findOne({
+//Verifica se o usuario é novo
+const verifyNewUser = async (req, res, next) => {
+  let { email, password } = req.body;
+
+  //se os dados nao foram passados, retorna erro
+  if (!email || !password) {
+    return res.status(400).json({ error: "Dados inválidos" });
+  }
+
+  try {
+    const emailCheck = await User.findOne({
       where: {
-        email: req.body.email,
+        email: email,
       },
     });
 
-    //if email exist in the database respond with a status of 409
-    if (emailcheck) {
-      return res.status(401).send("Authentication failed");
+    if (emailCheck) {
+      return res
+        .status(422)
+        .json({ error: "Ja existe um usuário com esse email!" });
     }
 
     next();
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    return res.status(500).json({ error: e.error });
   }
 };
 
 //exporting module
 module.exports = {
-  saveUser,
+  verifyNewUser,
 };
