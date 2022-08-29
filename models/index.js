@@ -11,6 +11,9 @@ const sequelize = new Sequelize({
   username: "backend",
   database: "backend_app",
   dialect: "postgres",
+  query: {
+    raw: true,
+  },
 });
 
 //checking if connection is done

@@ -6,6 +6,7 @@ const dotenv = require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const db = require("./models");
 const userRoutes = require("./routes/user_routes");
+const errorHandler = require("./utils/error_handler");
 
 //setting up your port
 const PORT = process.env.PORT || 8080;
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors(corsOptions));
 app.use(cookieParser());
+app.use(errorHandler);
 
 //synchronizing the database and forcing it to false so we dont lose data
 // db.sequelize.sync({ force: true }).then(() => {
@@ -26,7 +28,7 @@ db.sequelize.sync({ force: false }).then(() => {
 });
 
 //routes for the user API
-app.use("/api/users", userRoutes);
+app.use("/users", userRoutes);
 
 //listening to server connection
 app.listen(PORT, () => console.log(`Server is connected on ${PORT}`));

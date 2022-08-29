@@ -1,9 +1,9 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const db = require("../models");
 
 //Atribui o modelo users a variavel Users
 const User = db.users;
-
 
 //Verifica se o usuario é novo
 const verifyNewUser = async (req, res, next) => {
@@ -33,7 +33,23 @@ const verifyNewUser = async (req, res, next) => {
   }
 };
 
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (token == null) {
+    return res.status(401).json({ error: "Token inválido" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, user) => {
+    if (error) {
+      return res.status(403).json({ error: error.message });
+    }
+    req.user = user;
+    next();
+  });
+};
+
 //exporting module
 module.exports = {
   verifyNewUser,
+  authenticateToken,
 };
