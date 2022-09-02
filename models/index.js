@@ -30,9 +30,19 @@ const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
-//connecting to model
+// connecting to model
 db.users = require("./user")(sequelize, DataTypes);
 db.mutants = require("./mutant")(sequelize, DataTypes);
+
+//synchronizing the database and forcing it to false so we dont lose data
+// db.sequelize.sync({ force: true }).then(() => {
+db.sequelize.sync({ force: process.env.FORCE_RESYNC === "YES" }).then(() => {
+  console.log(
+    `DB sincronizado ${
+      process.env.FORCE_RESYNC === "NO" ? "com" : "sem"
+    } persistência dos dados.`
+  );
+});
 
 //exporting the module
 module.exports = db;

@@ -2,6 +2,7 @@
   "name": "backend_mutantes",
   "packageManager": "yarn@3.2.2",
   "scripts": {
+    "database": "docker compose -f ./.docker/docker-compose.yml up -d",
     "start": "nodemon ./server.js"
   },
   "dependencies": {
