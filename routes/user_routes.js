@@ -14,7 +14,7 @@ router.post("/signup", verifyNewUser, signUp);
 //Endpoint de Login
 router.post("/login", login);
 
-//Endpoint de retorno dos usuário
+//Endpoint de retorno dos usuários
 router.get("/", authenticateToken, getAllUsers);
 
 module.exports = router;

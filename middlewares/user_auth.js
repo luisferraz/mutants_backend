@@ -39,10 +39,20 @@ const authenticateToken = (req, res, next) => {
   if (token == null) {
     return res.status(401).json({ error: "Token inválido" });
   }
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, user) => {
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, async (error, decoded) => {
     if (error) {
       return res.status(403).json({ error: error.message });
     }
+
+    //Verifica se o usuário eh valido
+    const user = await User.findOne({
+      where: { id: decoded.user.id, email: decoded.user.email },
+    });
+
+    if (! user) {
+      return res.status(401).json({ error: "Usuário invalido" });
+    }
+
     req.user = user;
     next();
   });

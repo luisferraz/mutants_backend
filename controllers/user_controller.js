@@ -14,7 +14,9 @@ const signUp = async (req, res) => {
     //Cria um objeto com o email e a senha criptografada
     const dados = {
       email,
-      password: await bcrypt.hash(password.toString(), 10),
+      //A senha nao vai ser criptografada pq vamos cadastrar usuários direto no db depois
+      // password: await bcrypt.hash(password.toString(), 10),
+      password: password.toString(),
     };
 
     //Cria o usuário no banco de dados com esses dados
@@ -22,9 +24,9 @@ const signUp = async (req, res) => {
 
     //Se a criação do usuário deu certo, retornamos 201 created
     if (user) {
-      return res.status(201).json({ message: "Created" });
+      return res.status(201).json({ ...omitPassword(user.get()) });
     } else {
-      return res.status(404).json({ error: "Dados inválidos" });
+      return res.status(400).json({ error: "Dados inválidos" });
     }
   } catch (error) {
     console.log(error);
@@ -42,14 +44,14 @@ const login = async (req, res) => {
     }
     //Busca o usuário no banco pelo email
     const user = await User.findOne({ where: { email } });
-
     //Se nao encontrado, retorna http 401 email nao encontrado
     if (!user) {
       return res.status(401).json({ error: "Email nao encontrado" });
     }
 
     //Se encontrado, verifica a senha com bcrypt.compare
-    const validPassword = await bcrypt.compare(password, user.password);
+    // const validPassword = await bcrypt.compare(password.toString(), user.password);
+    const validPassword = password.toString() === user.password;
 
     //Se a senha for invalida, retorna 401 senha incorreta
     if (!validPassword) {
@@ -65,9 +67,8 @@ const login = async (req, res) => {
       httpOnly: true,
     });
 
-    return res.status(200).json({ ...omitPassword(user), tokens });
+    return res.status(200).json({ ...omitPassword(user.get()), tokens });
   } catch (error) {
-    console.log(error);
     return res.status(500).send(error);
   }
 };
@@ -76,17 +77,15 @@ const login = async (req, res) => {
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.findAll();
-    const newUsers = users.map((u) => omitPassword(u));
+    const newUsers = users.map((u) => omitPassword(u.get()));
     return res.status(200).json({ users: newUsers });
   } catch (e) {
-    console.log(e);
     return res.status(500).json({ error: e.message });
   }
 };
 
 function omitPassword(user) {
   var { password, ...userWithoutPassword } = user;
-  console.log(userWithoutPassword);
   return userWithoutPassword;
 }
 

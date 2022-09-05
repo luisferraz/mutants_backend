@@ -1,26 +1,25 @@
-//importing modules
 const { Sequelize, DataTypes } = require("sequelize");
 
-//Database connection with dialect of postgres specifying the database we are using
-//port for my database is 5433
-//database name is discover
+//Instancia da conexão com o banco de dados PostrgreSQL
 const sequelize = new Sequelize({
-  host: "localhost",
-  port: 5432,
-  password: "backend",
-  username: "backend",
-  database: "backend_app",
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 5432,
+  password: process.env.DB_PASSWORD,
+  username: process.env.DB_USER,
+  database: process.env.DB_DATABASE,
   dialect: "postgres",
-  query: {
-    raw: true,
-  },
+  // query: {
+  //   raw: true,
+  // },
 });
 
-//checking if connection is done
+//
 sequelize
   .authenticate()
   .then(() => {
-    console.log(`Database connected to backend_app`);
+    console.log(
+      `Conexão criada para banco de dados ${process.env.DB_DATABASE}`
+    );
   })
   .catch((err) => {
     console.log(err);
@@ -30,11 +29,28 @@ const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
-// connecting to model
+//Conectando aos modelos
 db.users = require("./user")(sequelize, DataTypes);
 db.mutants = require("./mutant")(sequelize, DataTypes);
+db.abilities = require("./ability")(sequelize, DataTypes);
+db.mutants_abilities = require("./mutants_abilities")(sequelize, DataTypes);
 
-//synchronizing the database and forcing it to false so we dont lose data
+//Definindo as associações
+db.mutants.belongsToMany(db.abilities, {
+  through: db.mutants_abilities,
+  as: "abilities",
+  hooks: true,
+});
+
+db.abilities.belongsToMany(db.mutants, {
+  through: db.mutants_abilities,
+  as: "mutants",
+  hooks: true,
+});
+
+//Sincronizando o banco
+// Force = True, dropa e recria todas as estruturas
+// Force = False, recria o que precisar, sem dropar tudo
 // db.sequelize.sync({ force: true }).then(() => {
 db.sequelize.sync({ force: process.env.FORCE_RESYNC === "YES" }).then(() => {
   console.log(
@@ -44,5 +60,4 @@ db.sequelize.sync({ force: process.env.FORCE_RESYNC === "YES" }).then(() => {
   );
 });
 
-//exporting the module
 module.exports = db;

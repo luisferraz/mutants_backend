@@ -11,3 +11,5 @@
 #.pnp.*
 
 .env
+resources/static/assets/tmp/*
+resources/static/assets/uploads/*
