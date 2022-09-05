@@ -1,13 +1,12 @@
 //importing modules
 const express = require("express");
 const cors = require("cors");
-const sequelize = require("sequelize");
 const dotenv = require("dotenv").config();
+const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
-const db = require("./models");
 const userRoutes = require("./routes/user_routes");
-const errorHandler = require("./utils/error_handler");
 const mutantRoutes = require("./routes/mutant_routes");
+const errorHandler = require("./utils/error_handler");
 
 //setting up your port
 const PORT = process.env.PORT || 8080;
@@ -19,8 +18,10 @@ global.appRoot = __dirname;
 const app = express();
 
 //middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// app.use(express.json());
+app.use(bodyParser.json());
+// app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(errorHandler);

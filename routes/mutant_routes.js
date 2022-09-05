@@ -9,7 +9,7 @@ const routerMutant = express.Router();
 routerMutant.post(
   "/",
   authenticateToken,
-  multer.upload.single("foto"),
+  multer.upload.single("photo"),
   mutant_controller.createMutant
 );
 
@@ -17,11 +17,11 @@ routerMutant.post(
 routerMutant.put(
   "/:id",
   authenticateToken,
-  multer.upload.single("foto"),
+  multer.upload.single("photo"),
   mutant_controller.updateMutant
 );
 
-//Endpoint de retorno de um mutante pelo ID
+//Endpoint de retorno de um mutante pelo ID ou nome
 routerMutant.get(
   "/",
   authenticateToken,
@@ -44,6 +44,5 @@ routerMutant.get(
 
 //Endpoint de remoção de um mutant
 routerMutant.delete("/", authenticateToken, mutant_controller.deleteMutant);
-
 
 module.exports = routerMutant;

@@ -1,7 +1,7 @@
 const db = require("../models");
-const mutant = require("../models/mutant");
-var stream = require("stream");
-const mutants_abilities = require("../models/mutants_abilities");
+const path = require("path");
+const { Op } = require("sequelize");
+const fs = require("fs");
 
 const Mutant = db.mutants;
 const Ability = db.abilities;
@@ -31,12 +31,14 @@ const createMutant = async (req, res) => {
     }
 
     //Pega as abilities passadas como array e as insere no banco
-    const abilitiesStr = req.body.ability;
+    const abilitiesStr = [].concat(req.body.ability);
+
     if (abilitiesStr.length > 3) {
       return res
         .status(400)
         .json({ error: "3 habilidades permitidas no máximo" });
     }
+    console.log(abilitiesStr);
     const abilities = await Promise.all(
       abilitiesStr.map(async (element) => {
         const [ability] = await Ability.findOrCreate({
@@ -80,7 +82,9 @@ const updateMutant = async (req, res) => {
     }
 
     //Pega as abilities passadas como array e as insere no banco
-    const abilitiesStr = req.body.ability;
+    console.log(req.body);
+
+    const abilitiesStr = [].concat(req.body.ability);
     if (abilitiesStr.length > 3) {
       return res
         .status(400)
@@ -94,6 +98,10 @@ const updateMutant = async (req, res) => {
         return ability;
       })
     );
+
+    //Deleta a imagem atual do mutante
+    //
+    deleteMutantPhoto(mutant.imageName);
 
     mutant.update({
       name,
@@ -122,7 +130,7 @@ const deleteMutant = async (req, res) => {
     if (!mutant) {
       return res.status(400).json({ error: "Registro não encontrado" });
     }
-
+    deleteMutantPhoto(mutant.imageName);
     mutant.destroy();
     return res.status(200).send();
   } catch (e) {
@@ -130,7 +138,7 @@ const deleteMutant = async (req, res) => {
   }
 };
 
-// Busca um mutante pelo parametro
+// Busca um mutante pelo parâmetro
 const findMutantByIdOrName = async (req, res) => {
   try {
     let { name, id } = req.query;
@@ -182,7 +190,9 @@ const findMutantsByAbility = async (req, res) => {
         association: "abilities",
         required: true,
         where: {
-          ability: ability.toUpperCase(),
+          ability: {
+            [Op.iLike]: `%${ability.toUpperCase()}%`,
+          },
         },
         attributes: ["ability"],
         through: {
@@ -193,20 +203,19 @@ const findMutantsByAbility = async (req, res) => {
     if (!mutants) {
       return res.status(400).json({ error: "Registro não encontrado" });
     }
-    //Buscamos um a um os mutantes para recarregar a lista de habilidades
     const mutantsWithAbilities = await Promise.all(
-      mutants.map(async (mutant) => {
-        const newMutant = await Mutant.findByPk(mutant.id, {
-          include: {
-            association: "abilities",
-            required: true,
-            attributes: ["ability"],
-            through: {
-              attributes: [],
-            },
+      await Mutant.findAll({
+        where: {
+          id: mutants.map((mutant) => mutant.id),
+        },
+        include: {
+          association: "abilities",
+          required: true,
+          attributes: ["ability"],
+          through: {
+            attributes: [],
           },
-        });
-        return newMutant;
+        },
       })
     );
 
@@ -223,15 +232,33 @@ const findMutantPhoto = async (req, res) => {
     const mutant = await Mutant.findByPk(id);
 
     if (mutant) {
-      res.set("Content-Type", mutant.imageType);
-      return res.sendFile(
-        `${appRoot}/resources/static/assets/uploads/${mutant.imageName}`
-      );
+      var options = {
+        root: path.join(appRoot, "/resources/static/assets/uploads/"),
+        dotfiles: "deny",
+        headers: {
+          "Content-Type": mutant.imageType,
+        },
+      };
+      return res.sendFile(mutant.imageName, options);
     } else {
       return res.status(400).json({ error: "Mutante nao encontrado " });
     }
   } catch (e) {
     res.status(403).json({ error: e.message });
+  }
+};
+
+const deleteMutantPhoto = (imageName) => {
+  if (imageName) {
+    fs.unlink(
+      path.join(appRoot, "/resources/static/assets/uploads/", imageName),
+      (err) => {
+        if (err) {
+          throw err;
+        }
+        console.log(`Imagem ${imageName} deletada com sucesso.`);
+      }
+    );
   }
 };
 
