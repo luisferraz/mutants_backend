@@ -15,18 +15,35 @@ routerMutant.post(
 
 //Endpoint de atualização de mutante
 routerMutant.put(
-  "/",
+  "/:id",
   authenticateToken,
   multer.upload.single("foto"),
   mutant_controller.updateMutant
 );
 
-//Endpoint de retorno de um mutante baseado nos parametros
-routerMutant.get("/", authenticateToken, mutant_controller.findMutantByParam);
+//Endpoint de retorno de um mutante pelo ID
+routerMutant.get(
+  "/",
+  authenticateToken,
+  mutant_controller.findMutantByIdOrName
+);
+
+//Endpoint de busca de mutante por Habilidade
+routerMutant.get(
+  "/ability/",
+  authenticateToken,
+  mutant_controller.findMutantsByAbility
+);
 
 //Endpoint de retorno da foto de um mutante
-routerMutant.get("/photo/", authenticateToken, mutant_controller.findMutantPhoto);
+routerMutant.get(
+  "/photo/",
+  authenticateToken,
+  mutant_controller.findMutantPhoto
+);
 
+//Endpoint de remoção de um mutant
+routerMutant.delete("/", authenticateToken, mutant_controller.deleteMutant);
 
 
 module.exports = routerMutant;

@@ -112,7 +112,7 @@ const updateMutant = async (req, res) => {
 //Remove um mutante no bd
 const deleteMutant = async (req, res) => {
   try {
-    let { id } = req.params;
+    let { id } = req.query;
     if (!id) {
       return res.status(400).json({ error: "Mutant id inválido." });
     }
@@ -131,19 +131,21 @@ const deleteMutant = async (req, res) => {
 };
 
 // Busca um mutante pelo parametro
-const findMutantByParam = async (req, res) => {
+const findMutantByIdOrName = async (req, res) => {
   try {
-    let { name, ability, id } = req.query;
+    let { name, id } = req.query;
+
+    if (!name && !id) {
+      return res.status(400).json({ error: "ID/Name não informado." });
+    }
+
     let where = {};
     if (name) {
       where.name = name;
-    }
-    if (ability) {
-      where.ability = ability;
-    }
-    if (id) {
+    } else {
       where.id = id;
     }
+
     //Procura o mutante na base
     const mutant = await Mutant.findOne({
       where: where,
@@ -155,7 +157,6 @@ const findMutantByParam = async (req, res) => {
           attributes: [],
         },
       },
-      // nest: true,
     });
     if (!mutant) {
       return res.status(400).json({ error: "Registro não encontrado" });
@@ -166,38 +167,79 @@ const findMutantByParam = async (req, res) => {
   }
 };
 
-//! MUDAR IMAGEM PRA ESTATICA (EXPRESS.STATIC + SALVAR NA PASTA + SALVAR O CAMINHO NO BANCO)
-const findMutantPhoto = async (req, res) => {
-  let { id } = req.query;
+// Busca um mutante pela habilidade
+const findMutantsByAbility = async (req, res) => {
+  try {
+    let { ability } = req.query;
 
-  Mutant.findByPk(id)
-    .then((mutant) => {
+    if (!ability) {
+      return res.status(400).json({ error: "Ability não informado." });
+    }
+
+    //Procura os mutantes na base
+    const mutants = await Mutant.findAll({
+      include: {
+        association: "abilities",
+        required: true,
+        where: {
+          ability: ability.toUpperCase(),
+        },
+        attributes: ["ability"],
+        through: {
+          attributes: [],
+        },
+      },
+    });
+    if (!mutants) {
+      return res.status(400).json({ error: "Registro não encontrado" });
+    }
+    //Buscamos um a um os mutantes para recarregar a lista de habilidades
+    const mutantsWithAbilities = await Promise.all(
+      mutants.map(async (mutant) => {
+        const newMutant = await Mutant.findByPk(mutant.id, {
+          include: {
+            association: "abilities",
+            required: true,
+            attributes: ["ability"],
+            through: {
+              attributes: [],
+            },
+          },
+        });
+        return newMutant;
+      })
+    );
+
+    return res.status(200).json({ mutants: mutantsWithAbilities });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+};
+
+const findMutantPhoto = async (req, res) => {
+  try {
+    let { id } = req.query;
+
+    const mutant = await Mutant.findByPk(id);
+
+    if (mutant) {
       res.set("Content-Type", mutant.imageType);
-      res.sendFile(
+      return res.sendFile(
         `${appRoot}/resources/static/assets/uploads/${mutant.imageName}`
       );
-
-      // var foto = Buffer.from();
-      // var readStream = new stream.PassThrough();
-      // readStream.end(foto);
-
-      // res.set(
-      //   "Content-disposition",
-      //   "attachment; filename=" + mutant.imageName
-      // );
-      // res.set("Content-Type", mutant.imageType);
-
-      // readStream.pipe(res);
-    })
-    .catch((err) => {
-      res.status(403).json({ error: err.message });
-    });
+    } else {
+      return res.status(400).json({ error: "Mutante nao encontrado " });
+    }
+  } catch (e) {
+    res.status(403).json({ error: e.message });
+  }
 };
 
 module.exports = {
   createMutant,
   updateMutant,
   deleteMutant,
-  findMutantByParam,
+  findMutantByIdOrName,
+  findMutantsByAbility,
   findMutantPhoto,
 };
