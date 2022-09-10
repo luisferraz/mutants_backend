@@ -8,12 +8,12 @@ const User = db.users;
 //Inclui um novo usuário
 const signUp = async (req, res) => {
   try {
-    //Pega email e senha do body da requisição
-    const { email, password } = req.body;
+    //Pega username e senha do body da requisição
+    const { username, password } = req.body;
 
-    //Cria um objeto com o email e a senha criptografada
+    //Cria um objeto com o username e a senha criptografada
     const dados = {
-      email,
+      username,
       //A senha nao vai ser criptografada pq vamos cadastrar usuários direto no db depois
       // password: await bcrypt.hash(password.toString(), 10),
       password: password.toString(),
@@ -37,16 +37,16 @@ const signUp = async (req, res) => {
 // Login
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!email || !password) {
+    if (!username || !password) {
       return res.status(400).json({ error: "Dados inválidos" });
     }
-    //Busca o usuário no banco pelo email
-    const user = await User.findOne({ where: { email } });
-    //Se nao encontrado, retorna http 401 email nao encontrado
+    //Busca o usuário no banco pelo username
+    const user = await User.findOne({ where: { username } });
+    //Se nao encontrado, retorna http 401 username nao encontrado
     if (!user) {
-      return res.status(401).json({ error: "Email nao encontrado" });
+      return res.status(401).json({ error: "Usuário nao encontrado" });
     }
 
     //Se encontrado, verifica a senha com bcrypt.compare
@@ -59,7 +59,7 @@ const login = async (req, res) => {
     }
 
     //Se a validação esta correta, retorna o JWT
-    let tokens = jwtTokens(user.id, user.email);
+    let tokens = jwtTokens(user.id, user.username);
 
     //Salva um cookie com o refresh_token
     res.cookie("refresh_token", tokens.refreshToken, {

@@ -1,7 +1,8 @@
 const db = require("../models");
 const path = require("path");
-const { Op } = require("sequelize");
+const { Op, QueryTypes } = require("sequelize");
 const fs = require("fs");
+const { Sequelize, sequelize } = require("../models");
 
 const Mutant = db.mutants;
 const Ability = db.abilities;
@@ -38,7 +39,7 @@ const createMutant = async (req, res) => {
         .status(400)
         .json({ error: "3 habilidades permitidas no máximo" });
     }
-    console.log(abilitiesStr);
+
     const abilities = await Promise.all(
       abilitiesStr.map(async (element) => {
         const [ability] = await Ability.findOrCreate({
@@ -58,7 +59,17 @@ const createMutant = async (req, res) => {
     //Atribui as suas habilidades
     await mutant.setAbilities(abilities, { individualHooks: true });
 
-    return res.status(201).json({ mutant });
+    const returnMutant = await Mutant.findByPk(mutant.id, {
+      include: {
+        association: "abilities",
+        required: true,
+        attributes: ["ability"],
+        through: {
+          attributes: [],
+        },
+      },
+    });
+    return res.status(201).json(returnMutant);
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
@@ -76,7 +87,17 @@ const updateMutant = async (req, res) => {
       return res.status(400).json({ error: "nome inválido" });
     }
     //Procura o mutante na base
-    const mutant = await Mutant.findByPk(id);
+    const mutant = await Mutant.findByPk(id, {
+      include: {
+        association: "abilities",
+        required: true,
+        attributes: ["ability"],
+        through: {
+          attributes: [],
+        },
+      },
+    });
+
     if (!mutant) {
       return res.status(400).json({ error: "Registro não encontrado" });
     }
@@ -103,15 +124,15 @@ const updateMutant = async (req, res) => {
     //
     deleteMutantPhoto(mutant.imageName);
 
-    mutant.update({
+    await mutant.update({
       name,
       imageType: req.file.mimetype,
       imageName: req.file.filename,
     });
-    mutant.save();
+    // await mutant.save();
     await mutant.setAbilities(abilities, { individualHooks: true });
-    mutant.reload();
-    return res.status(200).json({ mutant });
+    await mutant.reload();
+    return res.status(200).json(mutant);
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
@@ -120,7 +141,7 @@ const updateMutant = async (req, res) => {
 //Remove um mutante no bd
 const deleteMutant = async (req, res) => {
   try {
-    let { id } = req.query;
+    let { id } = req.params;
     if (!id) {
       return res.status(400).json({ error: "Mutant id inválido." });
     }
@@ -132,7 +153,7 @@ const deleteMutant = async (req, res) => {
     }
     deleteMutantPhoto(mutant.imageName);
     mutant.destroy();
-    return res.status(200).send();
+    return res.statusStatus(200);
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
@@ -169,7 +190,7 @@ const findMutantByIdOrName = async (req, res) => {
     if (!mutant) {
       return res.status(400).json({ error: "Registro não encontrado" });
     }
-    return res.status(200).json({ mutant });
+    return res.status(200).json(mutant);
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
@@ -219,7 +240,7 @@ const findMutantsByAbility = async (req, res) => {
       })
     );
 
-    return res.status(200).json({ mutants: mutantsWithAbilities });
+    return res.status(200).json(mutantsWithAbilities);
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
@@ -249,16 +270,52 @@ const findMutantPhoto = async (req, res) => {
 };
 
 const deleteMutantPhoto = (imageName) => {
-  if (imageName) {
-    fs.unlink(
-      path.join(appRoot, "/resources/static/assets/uploads/", imageName),
-      (err) => {
-        if (err) {
-          throw err;
+  try {
+    if (imageName) {
+      fs.unlink(
+        path.join(appRoot, "/resources/static/assets/uploads/", imageName),
+        (err) => {
+          if (err) {
+            console.log(`Erro ao remover imagem: ${err.message}`);
+          }
+          console.log(`Imagem ${imageName} deletada com sucesso.`);
         }
-        console.log(`Imagem ${imageName} deletada com sucesso.`);
-      }
+      );
+    }
+  } catch (e) {
+    console.log("Erro ao remover imagem.");
+  }
+};
+
+const findAllMutants = async (req, res) => {
+  try {
+    const mutants = await Mutant.findAll({
+      include: {
+        association: "abilities",
+        required: true,
+        attributes: ["ability"],
+        through: {
+          attributes: [],
+        },
+      },
+      order: [["id"]],
+    });
+    return res.status(200).json(mutants);
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+};
+
+const findTopAbilities = async (req, res) => {
+  try {
+    const topAbilities = await sequelize.query(
+      'SELECT ability, COUNT (*) AS count FROM abilities LEFT JOIN mutant_abilities ON (abilities.id = mutant_abilities."abilityId") GROUP BY ability ORDER BY 2 DESC, 1 LIMIT 3',
+      { type: QueryTypes.SELECT }
     );
+    return res.status(200).json(topAbilities);
+  } catch (e) {
+    console.log(e);
+    return res.status(500).json({ error: e.message });
   }
 };
 
@@ -269,4 +326,6 @@ module.exports = {
   findMutantByIdOrName,
   findMutantsByAbility,
   findMutantPhoto,
+  findAllMutants,
+  findTopAbilities,
 };

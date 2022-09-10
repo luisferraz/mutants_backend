@@ -48,6 +48,12 @@ db.abilities.belongsToMany(db.mutants, {
   hooks: true,
 });
 
+//Combinando associações pra facilitar o eager loading
+db.mutants.hasMany(db.mutants_abilities);
+db.mutants_abilities.belongsTo(db.mutants);
+db.abilities.hasMany(db.mutants_abilities);
+db.mutants_abilities.belongsTo(db.abilities);
+
 //Sincronizando o banco
 // Force = True, dropa e recria todas as estruturas
 // Force = False, recria o que precisar, sem dropar tudo

@@ -7,24 +7,25 @@ const User = db.users;
 
 //Verifica se o usuario é novo
 const verifyNewUser = async (req, res, next) => {
-  let { email, password } = req.body;
+  let { username, password } = req.body;
 
   //se os dados nao foram passados, retorna erro
-  if (!email || !password) {
+  if (!username || !password) {
     return res.status(400).json({ error: "Dados inválidos" });
   }
 
+  //Verifica se ja existe um usuario com o mesmo login
   try {
-    const emailCheck = await User.findOne({
+    const usernameCheck = await User.findOne({
       where: {
-        email: email,
+        username,
       },
     });
 
-    if (emailCheck) {
+    if (usernameCheck) {
       return res
         .status(422)
-        .json({ error: "Ja existe um usuário com esse email!" });
+        .json({ error: "Ja existe um usuário com esse nome!" });
     }
 
     next();
@@ -34,8 +35,8 @@ const verifyNewUser = async (req, res, next) => {
 };
 
 const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
+  const token = req.headers["authorization"];
+  // const token = authHeader && authHeader.split(" ")[1];
   if (token == null) {
     return res.status(401).json({ error: "Token inválido" });
   }
@@ -46,7 +47,7 @@ const authenticateToken = (req, res, next) => {
 
     //Verifica se o usuário eh valido
     const user = await User.findOne({
-      where: { id: decoded.user.id, email: decoded.user.email },
+      where: { id: decoded.user.id, username: decoded.user.username },
     });
 
     if (! user) {
