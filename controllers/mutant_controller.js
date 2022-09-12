@@ -28,24 +28,33 @@ const createMutant = async (req, res) => {
     });
 
     if (findMutant) {
-      return res.status(400).json({ error: "Registro ja existente." });
+      return res
+        .status(400)
+        .json({ error: "Já existe um mutante registrado com este nome." });
     }
 
     //Pega as abilities passadas como array e as insere no banco
-    const abilitiesStr = [].concat(req.body.ability);
+
+    let abilitiesStr = [].concat(req.body.ability);
+    abilitiesStr = abilitiesStr.filter((str) => str);
 
     if (abilitiesStr.length > 3) {
       return res
         .status(400)
         .json({ error: "3 habilidades permitidas no máximo" });
     }
+    if (abilitiesStr.length <= 0) {
+      return res.status(400).json({ error: "Nenhuma habilidade informada" });
+    }
 
     const abilities = await Promise.all(
       abilitiesStr.map(async (element) => {
-        const [ability] = await Ability.findOrCreate({
-          where: { ability: element.toUpperCase() },
-        });
-        return ability;
+        if (element) {
+          const [ability] = await Ability.findOrCreate({
+            where: { ability: element.toUpperCase() },
+          });
+          return ability;
+        }
       })
     );
 
@@ -103,20 +112,25 @@ const updateMutant = async (req, res) => {
     }
 
     //Pega as abilities passadas como array e as insere no banco
-    console.log(req.body);
+    let abilitiesStr = [].concat(req.body.ability);
+    abilitiesStr = abilitiesStr.filter((str) => str);
 
-    const abilitiesStr = [].concat(req.body.ability);
     if (abilitiesStr.length > 3) {
       return res
         .status(400)
         .json({ error: "3 habilidades permitidas no máximo" });
     }
+    if (abilitiesStr.length <= 0) {
+      return res.status(400).json({ error: "Nenhuma habilidade informada" });
+    }
     const abilities = await Promise.all(
       abilitiesStr.map(async (element) => {
-        const [ability] = await Ability.findOrCreate({
-          where: { ability: element.toUpperCase() },
-        });
-        return ability;
+        if (element) {
+          const [ability] = await Ability.findOrCreate({
+            where: { ability: element.toUpperCase() },
+          });
+          return ability;
+        }
       })
     );
 
@@ -153,7 +167,7 @@ const deleteMutant = async (req, res) => {
     }
     deleteMutantPhoto(mutant.imageName);
     mutant.destroy();
-    return res.statusStatus(200);
+    return res.sendStatus(200);
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
