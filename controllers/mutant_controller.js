@@ -251,6 +251,7 @@ const findMutantsByAbility = async (req, res) => {
             attributes: [],
           },
         },
+        order: [["name"]],
       })
     );
 
@@ -312,7 +313,7 @@ const findAllMutants = async (req, res) => {
           attributes: [],
         },
       },
-      order: [["id"]],
+      order: [["name"]],
     });
     return res.status(200).json(mutants);
   } catch (e) {
@@ -322,8 +323,10 @@ const findAllMutants = async (req, res) => {
 
 const findTopAbilities = async (req, res) => {
   try {
+    let { limit } = req.query;
+    limit = limit ? limit : 3;
     const topAbilities = await sequelize.query(
-      'SELECT ability, COUNT (*) AS count FROM abilities LEFT JOIN mutant_abilities ON (abilities.id = mutant_abilities."abilityId") GROUP BY ability ORDER BY 2 DESC, 1 LIMIT 3',
+      `SELECT ability, COUNT (*) AS count FROM abilities LEFT JOIN mutant_abilities ON (abilities.id = mutant_abilities."abilityId") GROUP BY ability ORDER BY 2 DESC, 1 LIMIT ${limit}`,
       { type: QueryTypes.SELECT }
     );
     return res.status(200).json(topAbilities);
